@@ -16,13 +16,67 @@ var Link        = ReactRouter.Link;
 
 ReactMount.allowFullPageRender = true;
 
+var SecondMainPage = React.createClass({
+
+  render: function() {
+    return (
+      <div className="MainPage">
+        <h1>Welcome to the Admin interface!</h1>
+        <p><Link href="/admin/users/doe">Login</Link></p>
+      </div>
+    );
+  }
+});
+
+var SecondUserPage = React.createClass({
+  mixins: [ReactAsync.Mixin],
+
+  statics: {
+    getUserInfo: function(username, cb) {
+      superagent.get(
+        'http://localhost:3000/api/users/' + username,
+        function(err, res) {
+          cb(err, res ? res.body : null);
+        });
+    }
+  },
+  
+  getInitialStateAsync: function(cb) {
+    this.type.getUserInfo(this.props.username, cb);
+  },
+
+  componentWillReceiveProps: function(nextProps) {
+    if (this.props.username !== nextProps.username) {
+      this.type.getUserInfo(nextProps.username, function(err, info) {
+        if (err) {
+          throw err;
+        }
+        this.setState(info);
+      }.bind(this));
+    }
+  },
+
+  render: function() {
+    var otherUser = this.props.username === 'doe' ? 'ivan' : 'doe';
+    return (
+      <div className="UserPage">
+        <h1>Hello, {this.state.name}!</h1>
+        <p>
+          Go to <Link href={"/admin/users/" + otherUser}>/app/users/{otherUser}</Link>
+        </p>
+        <p><Link href="/admin">Logout</Link></p>
+      </div>
+    );
+  }
+});
+
 var MainPage = React.createClass({
 
   render: function() {
     return (
       <div className="MainPage">
-        <h1>Hello, anonymous!</h1>
-        <p><Link href="/users/doe">Login</Link></p>
+        <h1>Welcome to the User interface!</h1>
+        <p><Link href="/app/users/doe">Login</Link></p>
       </div>
     );
   }
@@ -62,9 +116,9 @@ var UserPage = React.createClass({
       <div className="UserPage">
         <h1>Hello, {this.state.name}!</h1>
         <p>
-          Go to <Link href={"/users/" + otherUser}>/users/{otherUser}</Link>
+          Go to <Link href={"/app/users/" + otherUser}>/app/users/{otherUser}</Link>
         </p>
-        <p><Link href="/">Logout</Link></p>
+        <p><Link href="/app">Logout</Link></p>
       </div>
     );
   }
@@ -98,7 +152,29 @@ var App = React.createClass({
   }
 });
 
-module.exports = App;
+var SecondApp = React.createClass({
+
+  render: function() {
+    return (
+      <html>
+        <head>
+          <link rel="stylesheet" href="/assets/style.css" />
+          <script src="/assets/bundle.js" />
+        </head>
+        <Pages className="App" path={this.props.path}>
+          <Page path="/" handler={SecondMainPage} />
+          <Page path="/users/:username" handler={SecondUserPage} />
+          <NotFound handler={NotFoundHandler} />
+        </Pages>
+      </html>
+    );
+  }
+});
+
+module.exports = {
+  App: App,
+  SecondApp: SecondApp
+};
 
 if (typeof window !== 'undefined') {
   window.onload = function() {
